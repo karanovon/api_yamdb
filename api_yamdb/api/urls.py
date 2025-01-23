@@ -6,7 +6,9 @@ from api.views import (
     GenreViewSet,
     TitleViewSet,
     ReviewViewSet,
-    CommentViewSet
+    CommentViewSet,
+    SignupUser,
+    Token
 )
 
 router_v1 = DefaultRouter()
@@ -18,4 +20,6 @@ router_v1.register('comments', CommentViewSet, basename='comments')
 
 urlpatterns = [
     path('v1/', include(router_v1.urls)),
+    path('v1/auth/signup/', SignupUser.as_view(), name='signup'),
+    path('v1/auth/token/', Token.as_view(), name='token')
 ]

@@ -1,6 +1,42 @@
 from rest_framework import serializers
+from django.core.validators import RegexValidator
 
-from reviews.models import Category, Genre, Title, Comment, Review
+from reviews.models import Category, Genre, Title, Comment, Review, User
+
+
+class SignUpSerializer(serializers.Serializer):
+    username = serializers.CharField(
+        max_length=150,
+        validators=[RegexValidator(r'^[\w.@+-]+\Z')]
+    )
+    email = serializers.EmailField(max_length=254)
+
+    def validate(self, data):
+        if User.objects.filter(email=data['email']).exists():
+            user = User.objects.get(email=data['email'])
+            if user.username != data['username']:
+                raise serializers.ValidationError(
+                    f'Неверный username для почты {user.email}'
+                )
+        if User.objects.filter(username=data['username']).exists():
+            user = User.objects.get(username=data['username'])
+            if user.email != data['email']:
+                raise serializers.ValidationError(
+                    f'Неверный email для пользователя {user.username}'
+                )
+        return data
+
+    def validate_username(self, data):
+        if data.lower() == 'me':
+            raise serializers.ValidationError(
+                'username "me" использовать запрещено'
+            )
+        return data
+
+
+class TokenSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    confirmation_code = serializers.CharField()
 
 
 class CategorySerializer(serializers.ModelSerializer):
