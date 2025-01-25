@@ -1,19 +1,108 @@
+from django.core.mail import send_mail
+from django.contrib.auth.tokens import default_token_generator
 from django.db.models import Avg, QuerySet
 from django_filters import rest_framework
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, viewsets, permissions
-from rest_framework.serializers import Serializer
+from rest_framework import filters, permissions, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.filters import SearchFilter
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import BasePermission
-from api.permissions import IsAuthorOrReadOnly
+from rest_framework.response import Response
+from rest_framework.serializers import Serializer
+from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework.views import APIView
+
 from api.serializers import (
     CategorySerializer,
     GenreSerializer,
     TitleReadSerializer,
     TitleWriteSerializer,
     CommentSerializer,
-    ReviewSerializer
+    ReviewSerializer,
+    SignUpSerializer,
+    TokenSerializer,
+    UserSerializer,
+    EditUserSerializer
 )
-from reviews.models import Category, Genre, Title, Review
+from reviews.models import Category, Genre, Title, Review, User
+
+from .permissions import (
+    IsAdminOrSuperUser,
+    IsAuthorOrReadOnly,
+)
+
+
+class SignupUser(APIView):
+    """Отправка кода подтверждения на почту."""
+
+    def post(self, request):
+        serializer = SignUpSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user, _ = User.objects.get_or_create(**serializer.validated_data)
+        confirmation_code = default_token_generator.make_token(user)
+        send_mail(
+            subject='Confirmation code from yambdb',
+            message=(f'code_confirmation {confirmation_code}'),
+            from_email='api_yamdb@mail.ru',
+            recipient_list=[user.email],
+        )
+        return Response(
+            {'message': 'код подтверждения отправлен на вашу почту'},
+            status=status.HTTP_200_OK
+        )
+
+
+class Token(APIView):
+    """Выдача токена после отправки кода подтверждения."""
+
+    def post(self, request):
+        serializer = TokenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        username = serializer.validated_data['username']
+        user = get_object_or_404(User, username=username)
+        confirmation_code = serializer.validated_data['confirmation_code']
+        if default_token_generator.check_token(user, confirmation_code):
+            return Response(
+                {'Token': str(AccessToken.for_user(user))},
+                status=status.HTTP_200_OK
+            )
+        return Response(
+            {'message': 'Неверный код подтверждения '},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    """Управление пользователями админом и суперпользователем."""
+
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    filter_backends = (SearchFilter,)
+    lookup_field = 'username'
+    search_fields = ('username',)
+    permission_classes = (IsAdminOrSuperUser, IsAuthorOrReadOnly)
+    pagination_class = PageNumberPagination
+    http_method_names = ('get', 'post', 'patch', 'delete',)
+
+    """Ресурс для управлением собственным профилем
+    авторизованного пользователя."""
+    @action(
+        methods=('get', 'patch',),
+        detail=False,
+        url_path='me',
+        permission_classes=[permissions.IsAuthenticated],)
+    def me(self, request):
+        user = request.user
+        if request.method == "GET":
+            serializer = UserSerializer(
+                user, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+        serializer = EditUserSerializer(
+            user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class CategoryViewSet(viewsets.ModelViewSet):

@@ -1,6 +1,85 @@
+from django.core.validators import RegexValidator
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 
-from reviews.models import Category, Genre, Title, Comment, Review
+from reviews.models import Category, Genre, Title, Comment, Review, User
+
+
+class UserSerializer(serializers.ModelSerializer):
+    """Сериализатор пользователя."""
+    username = serializers.CharField(
+        max_length=150,
+        required=True,
+        validators=[
+            RegexValidator(r'^[\w.@+-]+\Z'),
+            UniqueValidator(queryset=User.objects.all())
+        ]
+    )
+
+    email = serializers.EmailField(
+        max_length=254,
+        required=True,
+        validators=[UniqueValidator(queryset=User.objects.all())]
+    )
+
+    class Meta:
+        model = User
+        fields = ('username', 'email', 'first_name',
+                  'last_name', 'bio', 'role')
+
+
+class EditUserSerializer(serializers.ModelSerializer):
+    """Сериализатор для редактирвания профиля пользователя."""
+
+    username = serializers.CharField(
+        max_length=150,
+        required=True,
+        validators=[RegexValidator(r'^[\w.@+-]+\Z')])
+
+    class Meta:
+        model = User
+        fields = ('username', 'email', 'first_name',
+                  'last_name', 'bio', 'role')
+        read_only_fields = ('role',)
+
+
+class SignUpSerializer(serializers.Serializer):
+    """Сериализатор для отправки кода подтверждения на почту."""
+
+    username = serializers.CharField(
+        max_length=150,
+        validators=[RegexValidator(r'^[\w.@+-]+\Z')]
+    )
+    email = serializers.EmailField(max_length=254)
+
+    def validate(self, data):
+        if User.objects.filter(email=data['email']).exists():
+            user = User.objects.get(email=data['email'])
+            if user.username != data['username']:
+                raise serializers.ValidationError(
+                    f'Неверный username для почты {user.email}'
+                )
+        if User.objects.filter(username=data['username']).exists():
+            user = User.objects.get(username=data['username'])
+            if user.email != data['email']:
+                raise serializers.ValidationError(
+                    f'Неверный email для пользователя {user.username}'
+                )
+        return data
+
+    def validate_username(self, data):
+        if data.lower() == 'me':
+            raise serializers.ValidationError(
+                'username "me" использовать запрещено'
+            )
+        return data
+
+
+class TokenSerializer(serializers.Serializer):
+    """Сериализатор выдачи токена."""
+
+    username = serializers.CharField()
+    confirmation_code = serializers.CharField()
 
 
 class CategorySerializer(serializers.ModelSerializer):

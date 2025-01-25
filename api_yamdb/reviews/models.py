@@ -1,9 +1,41 @@
 from django.db import models
 from django.db.models import Manager
+from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 
 # Константа для ограничения длины текста
 LENGTH_TEXT: int = 50
+
+ROLES = (
+    ('admin', 'admin'),
+    ('moderator', 'moderator'),
+    ('user', 'user'),
+)
+
+
+class User(AbstractUser):
+    email = models.EmailField(max_length=254, unique=True)
+    username = models.CharField(max_length=150, unique=True)
+    first_name = models.CharField(max_length=150, blank=True)
+    last_name = models.CharField(max_length=150, blank=True)
+    bio = models.TextField(blank=True)
+    role = models.CharField(
+        max_length=9,
+        default='user',
+        blank=True,
+        choices=ROLES
+    )
+
+    @property
+    def is_admin(self):
+        return self.role == 'admin'
+
+    @property
+    def is_moderator(self):
+        return self.role == 'moderator'
+
+    class Meta:
+        ordering = ('username',)
 
 
 class Category(models.Model):
