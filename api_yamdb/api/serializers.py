@@ -1,10 +1,51 @@
-from rest_framework import serializers
 from django.core.validators import RegexValidator
+from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 
 from reviews.models import Category, Genre, Title, Comment, Review, User
 
 
+class UserSerializer(serializers.ModelSerializer):
+    """Сериализатор пользователя."""
+    username = serializers.CharField(
+        max_length=150,
+        required=True,
+        validators=[
+            RegexValidator(r'^[\w.@+-]+\Z'),
+            UniqueValidator(queryset=User.objects.all())
+        ]
+    )
+
+    email = serializers.EmailField(
+        max_length=254,
+        required=True,
+        validators=[UniqueValidator(queryset=User.objects.all())]
+    )
+
+    class Meta:
+        model = User
+        fields = ('username', 'email', 'first_name',
+                  'last_name', 'bio', 'role')
+
+
+class EditUserSerializer(serializers.ModelSerializer):
+    """Сериализатор для редактирвания профиля пользователя."""
+
+    username = serializers.CharField(
+        max_length=150,
+        required=True,
+        validators=[RegexValidator(r'^[\w.@+-]+\Z')])
+
+    class Meta:
+        model = User
+        fields = ('username', 'email', 'first_name',
+                  'last_name', 'bio', 'role')
+        read_only_fields = ('role',)
+
+
 class SignUpSerializer(serializers.Serializer):
+    """Сериализатор для отправки кода подтверждения на почту."""
+
     username = serializers.CharField(
         max_length=150,
         validators=[RegexValidator(r'^[\w.@+-]+\Z')]
@@ -35,6 +76,8 @@ class SignUpSerializer(serializers.Serializer):
 
 
 class TokenSerializer(serializers.Serializer):
+    """Сериализатор выдачи токена."""
+
     username = serializers.CharField()
     confirmation_code = serializers.CharField()
 
