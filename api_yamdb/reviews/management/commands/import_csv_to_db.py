@@ -50,6 +50,29 @@ class Command(BaseCommand):
                             )
                             continue
 
+                    if key == 'comments':
+                        user_id = row.pop('author')
+                        try:
+                            user = User.objects.get(id=user_id)
+                            row['author'] = user
+                        except User.DoesNotExist:
+                            self.stderr.write(
+                                f"Пользователь с id={user_id} не найден. "
+                                "Пропуск строки."
+                            )
+                            continue
+
+                    if key == 'reviews':
+                        user_id = row.pop('author')
+                        try:
+                            user = User.objects.get(id=user_id)
+                            row['author'] = user
+                        except User.DoesNotExist:
+                            self.stderr.write(
+                                f"Пользователь с id={user_id} не найден. Пропуск строки."
+                            )
+                            continue
+
                     instances.append(model(**row))
 
                 model.objects.bulk_create(instances)
