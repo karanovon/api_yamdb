@@ -1,6 +1,6 @@
 from django.core.mail import send_mail
 from django.contrib.auth.tokens import default_token_generator
-from django.db.models import Avg, QuerySet
+from django.db.models import Avg
 from django_filters import rest_framework
 from django.shortcuts import get_object_or_404
 from rest_framework import filters, permissions, status, viewsets
@@ -8,12 +8,9 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
 from rest_framework.filters import SearchFilter
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
-from rest_framework.serializers import Serializer
 from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework.views import APIView
-
 
 from api.serializers import (
     CategorySerializer,
@@ -28,7 +25,6 @@ from api.serializers import (
     EditUserSerializer
 )
 from reviews.models import Category, Genre, Title, Review, User
-
 from .filters import TitleFilter
 from .permissions import (
     IsAdminOrReadOnly,
@@ -82,7 +78,6 @@ class Token(APIView):
 
 class UserViewSet(viewsets.ModelViewSet):
     """Управление пользователями админом и суперпользователем."""
-
     queryset = User.objects.all()
     serializer_class = UserSerializer
     filter_backends = (SearchFilter,)
@@ -114,7 +109,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
 class CategoryViewSet(viewsets.ModelViewSet):
     """ViewSet для работы с категориями."""
-    queryset = Category.objects.all().order_by('name')
+    queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (filters.SearchFilter,)
@@ -128,7 +123,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 class GenreViewSet(viewsets.ModelViewSet):
     """ViewSet для работы с жанрами."""
-    queryset = Genre.objects.all().order_by('name')
+    queryset = Genre.objects.all()
     serializer_class = GenreSerializer
     permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (filters.SearchFilter,)
@@ -168,15 +163,14 @@ class TitleViewSet(viewsets.ModelViewSet):
 
 class ReviewViewSet(viewsets.ModelViewSet):
     """Вьюсет для объектов модели Review."""
-
-    serializer_class: type[Serializer] = ReviewSerializer
-    permission_classes: tuple[type[BasePermission], ...] = (
+    serializer_class = ReviewSerializer
+    permission_classes = (
         permissions.IsAuthenticatedOrReadOnly,
         IsStaffOrAuthorOrReadOnly
     )
     http_method_names = ['get', 'post', 'patch', 'delete', 'head']
 
-    def get_title(self) -> Title:
+    def get_title(self):
         """
         Возвращает объект текущего произведения.
 
@@ -188,12 +182,12 @@ class ReviewViewSet(viewsets.ModelViewSet):
             raise NotFound('title_id отсутствует в параметрах запроса.')
         return get_object_or_404(Title, pk=title_id)
 
-    def get_queryset(self) -> QuerySet[Review]:
+    def get_queryset(self):
         """Возвращает queryset с отзывами для текущего произведения."""
         title = self.get_title()
         return title.reviews.select_related('author')
 
-    def perform_create(self, serializer: Serializer) -> None:
+    def perform_create(self, serializer):
         """
         Создает отзыв для текущего произведения,
         где автором является текущий пользователь.
@@ -206,14 +200,11 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
 class CommentViewSet(viewsets.ModelViewSet):
     """Вьюсет для объектов модели Comment."""
-
-    serializer_class: type[Serializer] = CommentSerializer
-    permission_classes: tuple[type[BasePermission], ...] = (
-        IsStaffOrAuthorOrReadOnly,
-    )
+    serializer_class = CommentSerializer
+    permission_classes = (IsStaffOrAuthorOrReadOnly,)
     http_method_names = ['get', 'post', 'patch', 'delete']
 
-    def get_review(self) -> Review:
+    def get_review(self):
         """
         Возвращает объект текущего отзыва.
 
@@ -225,11 +216,11 @@ class CommentViewSet(viewsets.ModelViewSet):
             raise ValueError('review_id отсутствует в параметрах запроса.')
         return get_object_or_404(Review, pk=review_id)
 
-    def get_queryset(self) -> QuerySet:
+    def get_queryset(self):
         """Возвращает queryset с комментариями для текущего отзыва."""
         return self.get_review().comments.select_related('author').all()
 
-    def perform_create(self, serializer: Serializer) -> None:
+    def perform_create(self, serializer):
         """
         Создает комментарий для текущего отзыва,
         где автором является текущий пользователь.
