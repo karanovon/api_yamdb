@@ -69,7 +69,7 @@ class Command(BaseCommand):
                             row['author'] = user
                         except User.DoesNotExist:
                             self.stderr.write(
-                                f"Пользователь с id={user_id} не найден. Пропуск строки."
+                                f"Пользователь с id={user_id} не найден."
                             )
                             continue
 
