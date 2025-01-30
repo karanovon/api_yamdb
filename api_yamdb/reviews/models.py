@@ -2,8 +2,8 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 
+from . import constants
 
-LENGTH_TEXT: int = 50
 
 ROLES = (
     ('admin', 'admin'),
@@ -13,13 +13,13 @@ ROLES = (
 
 
 class User(AbstractUser):
-    email = models.EmailField(max_length=254, unique=True)
-    username = models.CharField(max_length=150, unique=True)
-    first_name = models.CharField(max_length=150, blank=True)
-    last_name = models.CharField(max_length=150, blank=True)
+    email = models.EmailField(max_length=constants.EMAIL_LENGHT, unique=True)
+    username = models.CharField(max_length=constants.NAME_LENGHT, unique=True)
+    first_name = models.CharField(max_length=constants.NAME_LENGHT, blank=True)
+    last_name = models.CharField(max_length=constants.NAME_LENGHT, blank=True)
     bio = models.TextField(blank=True)
     role = models.CharField(
-        max_length=9,
+        max_length=constants.ROLE_LENGHT,
         default='user',
         blank=True,
         choices=ROLES
@@ -38,8 +38,8 @@ class User(AbstractUser):
 
 
 class Category(models.Model):
-    name = models.CharField(max_length=256)
-    slug = models.SlugField(unique=True, max_length=50)
+    name = models.CharField(max_length=constants.FIELD_LENGTH)
+    slug = models.SlugField(unique=True, max_length=constants.SLUG_LENGTH)
 
     class Meta:
         verbose_name = 'Категория'
@@ -50,8 +50,8 @@ class Category(models.Model):
 
 
 class Genre(models.Model):
-    name = models.CharField(max_length=256)
-    slug = models.SlugField(unique=True, max_length=50)
+    name = models.CharField(max_length=constants.FIELD_LENGTH)
+    slug = models.SlugField(unique=True, max_length=constants.SLUG_LENGTH)
 
     class Meta:
         verbose_name = 'Жанр'
@@ -62,7 +62,7 @@ class Genre(models.Model):
 
 
 class Title(models.Model):
-    name = models.CharField(max_length=256)
+    name = models.CharField(max_length=constants.FIELD_LENGTH)
     year = models.IntegerField()
     description = models.TextField(null=True, blank=True)
     genre = models.ManyToManyField(Genre, related_name='titles')
@@ -122,7 +122,7 @@ class Review(models.Model):
         )
 
     def __str__(self):
-        return self.text[:LENGTH_TEXT]
+        return self.text[:constants.SLUG_LENGTH]
 
 
 class Comment(models.Model):
@@ -153,4 +153,4 @@ class Comment(models.Model):
         ordering = ('-pub_date',)
 
     def __str__(self):
-        return self.text[:LENGTH_TEXT]
+        return self.text[:constants.SLUG_LENGTH]
