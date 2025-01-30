@@ -1,9 +1,10 @@
+from django.conf import settings
 from django.core.mail import send_mail
 from django.contrib.auth.tokens import default_token_generator
 from django.db.models import Avg
 from django_filters import rest_framework
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, permissions, status, viewsets
+from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
 from rest_framework.filters import SearchFilter
@@ -25,6 +26,7 @@ from api.serializers import (
     EditUserSerializer
 )
 from reviews.models import Category, Genre, Title, Review, User
+from .base_views import BaseCategoryGenreViewSet
 from .filters import TitleFilter
 from .permissions import (
     IsAdminOrReadOnly,
@@ -44,7 +46,7 @@ class SignupUser(APIView):
         send_mail(
             subject='Confirmation code from YamDB',
             message=f'code_confirmation {confirmation_code}',
-            from_email='api_yamdb@mail.ru',
+            from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[user.email],
         )
         return Response(
@@ -107,32 +109,16 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class CategoryViewSet(viewsets.ModelViewSet):
+class CategoryViewSet(BaseCategoryGenreViewSet):
     """ViewSet для работы с категориями."""
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = (IsAdminOrReadOnly,)
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('name',)
-    lookup_field = 'slug'
-    http_method_names = ['get', 'post', 'delete']
-
-    def retrieve(self, request, *args, **kwargs):
-        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
-class GenreViewSet(viewsets.ModelViewSet):
+class GenreViewSet(BaseCategoryGenreViewSet):
     """ViewSet для работы с жанрами."""
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-    permission_classes = (IsAdminOrReadOnly,)
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('name',)
-    lookup_field = 'slug'
-    http_method_names = ['get', 'post', 'delete']
-
-    def retrieve(self, request, *args, **kwargs):
-        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 class TitleViewSet(viewsets.ModelViewSet):

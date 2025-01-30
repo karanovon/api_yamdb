@@ -3,12 +3,13 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
 from reviews.models import Category, Genre, Title, Comment, Review, User
+from reviews import constants
 
 
 class UserSerializer(serializers.ModelSerializer):
     """Сериализатор пользователя."""
     username = serializers.CharField(
-        max_length=150,
+        max_length=constants.NAME_LENGHT,
         required=True,
         validators=[
             RegexValidator(r'^[\w.@+-]+\Z'),
@@ -17,7 +18,7 @@ class UserSerializer(serializers.ModelSerializer):
     )
 
     email = serializers.EmailField(
-        max_length=254,
+        max_length=constants.EMAIL_LENGHT,
         required=True,
         validators=[UniqueValidator(queryset=User.objects.all())]
     )
@@ -32,7 +33,7 @@ class EditUserSerializer(serializers.ModelSerializer):
     """Сериализатор для редактирвания профиля пользователя."""
 
     username = serializers.CharField(
-        max_length=150,
+        max_length=constants.NAME_LENGHT,
         required=True,
         validators=[RegexValidator(r'^[\w.@+-]+\Z')])
 
@@ -47,10 +48,10 @@ class SignUpSerializer(serializers.Serializer):
     """Сериализатор для отправки кода подтверждения на почту."""
 
     username = serializers.CharField(
-        max_length=150,
+        max_length=constants.NAME_LENGHT,
         validators=[RegexValidator(r'^[\w.@+-]+\Z')]
     )
-    email = serializers.EmailField(max_length=254)
+    email = serializers.EmailField(max_length=constants.EMAIL_LENGHT)
 
     def validate(self, data):
         if User.objects.filter(email=data['email']).exists():
